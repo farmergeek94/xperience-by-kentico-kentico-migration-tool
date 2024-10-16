@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.Xml.Linq;
 
 using CMS.DataEngine;
+using CMS.FormEngine;
 using CMS.Modules;
+using CMS.ContentEngine.Internal;
 
 using MediatR;
 
@@ -186,8 +188,46 @@ public class MigrateCustomTablesHandler(
                 //     dataClassInfo = reusableSchemaService.ConvertToReusableSchema(dataClassInfo);
                 // }
 
-                var containerResource = await EnsureCustomTablesResource();
-                dataClassInfo.ClassResourceID = containerResource.ResourceID;
+                var formInfo = FormHelper.GetBasicFormDefinition("ContentItemDataID");
+
+                var formItem = new FormFieldInfo
+                {
+                    Name = nameof(ContentItemDataInfo.ContentItemDataCommonDataID),
+                    ReferenceToObjectType = ContentItemCommonDataInfo.OBJECT_TYPE,
+                    ReferenceType = ObjectDependencyEnum.Required,
+                    System = true,
+                    DataType = "integer",
+                    Enabled = true,
+                    Visible = false
+                };
+                formInfo.AddFormItem(formItem);
+
+                formItem = new FormFieldInfo
+                {
+                    Name = nameof(ContentItemDataInfo.ContentItemDataGUID),
+                    IsUnique = true,
+                    System = true,
+                    DataType = "guid",
+                    Enabled = true,
+                    Visible = false
+                };
+                formInfo.AddFormItem(formItem);
+
+
+
+                //var containerResource = await EnsureCustomTablesResource();
+                //dataClassInfo.ClassResourceID = containerResource.ResourceID;
+
+                // Remove the resource
+                dataClassInfo.SetValue("ClassResourceID", null);
+
+                // Set the content hub
+                dataClassInfo.ClassType = ClassType.CONTENT_TYPE;
+                dataClassInfo.ClassContentTypeType = ClassContentTypeType.REUSABLE;
+
+                // Reset to reusable content type. 
+                SetFormDefinition(dataClassInfo, formInfo);
+
                 kxpClassFacade.SetClass(dataClassInfo);
 
                 protocol.Success(srcClass, dataClassInfo, mapped);
@@ -208,5 +248,24 @@ public class MigrateCustomTablesHandler(
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Ensure that the form is upserted with any existing form
+    /// </summary>
+    /// <param name="info"></param>
+    /// <param name="form"></param>
+    private static void SetFormDefinition(DataClassInfo info, FormInfo form)
+    {
+        if (info.ClassID > 0)
+        {
+            var existingForm = new FormInfo(info.ClassFormDefinition);
+            existingForm.CombineWithForm(form, new());
+            info.ClassFormDefinition = existingForm.GetXmlDefinition();
+        }
+        else
+        {
+            info.ClassFormDefinition = form.GetXmlDefinition();
+        }
     }
 }
