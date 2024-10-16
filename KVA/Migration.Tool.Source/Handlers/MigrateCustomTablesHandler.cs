@@ -21,7 +21,6 @@ using Migration.Tool.Source.Contexts;
 using Migration.Tool.Source.Helpers;
 using Migration.Tool.Source.Model;
 using Microsoft.Data.SqlClient;
-using Migration.Tool.Source.Providers;
 using CMS.ContentEngine;
 
 namespace Migration.Tool.Source.Handlers;
@@ -42,9 +41,6 @@ public class MigrateCustomTablesHandler(
 {
     private readonly Guid resourceGuidNamespace = new("C4E3F5FD-9220-4300-91CE-8EB565D3235E");
     private ResourceInfo? customTableResource;
-
-    private readonly ContentItemNameProvider contentItemNameProvider = new(new ContentItemNameValidator());
-
 
     public async Task<CommandResult> Handle(MigrateCustomTablesCommand request, CancellationToken cancellationToken)
     {
@@ -147,19 +143,13 @@ public class MigrateCustomTablesHandler(
                     var r = (xbkDataClass.ClassTableName, xbkDataClass.ClassGUID, autoIncrementColumns);
                     logger.LogTrace("Class '{ClassGuild}' Resolved as: {Result}", srcClass.ClassGUID, r);
 
-                    string[] columnNamesToRemove = ["ItemID", "ItemModifiedWhen", "ItemGUID", "ContentItemDataID", "ContentItemDataGUID", "ContentItemDataCommonDataID"];
-
-                    var formInfo = new FormInfo(xbkDataClass.ClassFormDefinition);
-
-
-                    var columnsToInclude = formInfo.GetFields(true, true).Select(x => x.Name);
 
                     try
                     {
                         // check if data is present in target tables
                         if (bulkDataCopyService.CheckIfDataExistsInTargetTable(xbkDataClass.ClassTableName))
                         {
-                            logger.LogWarning("Data exists in target coupled data table '{TableName}' - cannot migrate, skipping form data migration", r.ClassTableName);
+                            logger.LogWarning("Data exists in target coupled data table '{TableName}' - cannot migrate, skipping data migration", r.ClassTableName);
                             protocol.Append(HandbookReferences.DataMustNotExistInTargetInstanceTable(xbkDataClass.ClassTableName));
                             continue;
                         }
@@ -167,16 +157,18 @@ public class MigrateCustomTablesHandler(
                         // get all the data for type
                         var data = Data(xbkDataClass.ClassTableName);
 
+                        string languageCode = modelFacade.SelectAll<ICmsCulture>().Select(x => x.CultureCode).FirstOrDefault() ?? "en_US";
+
                         // create content items from data
                         foreach (var item in data)
                         {
                             var guid = Guid.NewGuid();
                             string nameColumn = item.Keys.Where(x => x.IndexOf("name", StringComparison.CurrentCultureIgnoreCase) > -1).FirstOrDefault("");
-                            string safeNodeName = await contentItemNameProvider.Get(item[nameColumn]?.ToString() ?? guid.ToString());
+                            string safeNodeName = item[nameColumn]?.ToString() ?? guid.ToString();
                             CreateContentItemParameters createParams = new(
                                                                 xbkDataClass.ClassName,
                                                                 safeNodeName,
-                                                                "en_US");
+                                                                languageCode);
                             ContentItemData itemData = new(item);
                             _ = await contentItemManager.Create(createParams, itemData);
 
