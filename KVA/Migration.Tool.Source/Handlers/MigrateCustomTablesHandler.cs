@@ -22,6 +22,7 @@ using Migration.Tool.Source.Helpers;
 using Migration.Tool.Source.Model;
 using Microsoft.Data.SqlClient;
 using CMS.ContentEngine;
+using CMS.Membership;
 
 namespace Migration.Tool.Source.Handlers;
 
@@ -34,7 +35,8 @@ public class MigrateCustomTablesHandler(
     IEntityMapper<ICmsClass, DataClassInfo> dataClassMapper,
     PrimaryKeyMappingContext primaryKeyMappingContext,
     ToolConfiguration configuration,
-    IContentItemManager contentItemManager
+    IContentItemManagerFactory contentItemManagerFactory,
+    IUserInfoProvider userInfoProvider
 // ReusableSchemaService reusableSchemaService
 )
     : IRequestHandler<MigrateCustomTablesCommand, CommandResult>
@@ -82,6 +84,8 @@ public class MigrateCustomTablesHandler(
         using var srcClassesDe = EnumerableHelper.CreateDeferrableItemWrapper(
             modelFacade.Select<ICmsClass>("ClassIsCustomTable=1", "ClassID ASC")
         );
+
+        var user = userInfoProvider.Get("administrator");
 
         while (srcClassesDe.GetNext(out var di))
         {
@@ -170,6 +174,9 @@ public class MigrateCustomTablesHandler(
                                                                 safeNodeName,
                                                                 languageCode);
                             ContentItemData itemData = new(item);
+
+                            var contentItemManager = contentItemManagerFactory.Create(user.UserID);
+
                             _ = await contentItemManager.Create(createParams, itemData);
 
                         }
