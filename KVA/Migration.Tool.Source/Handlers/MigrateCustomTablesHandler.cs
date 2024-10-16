@@ -174,7 +174,7 @@ public class MigrateCustomTablesHandler(
 
                         }
 
-                        logger.LogInformation($"Data imported for Custom Table: {xbkDataClass.ClassName}");
+                        logger.LogInformation("Data imported for Custom Table: {ClassName}", xbkDataClass.ClassName);
                     }
                     catch (Exception ex)
                     {
