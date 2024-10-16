@@ -20,6 +20,9 @@ using Migration.Tool.KXP.Api;
 using Migration.Tool.Source.Contexts;
 using Migration.Tool.Source.Helpers;
 using Migration.Tool.Source.Model;
+using Microsoft.Data.SqlClient;
+using Migration.Tool.Source.Providers;
+using CMS.ContentEngine;
 
 namespace Migration.Tool.Source.Handlers;
 
@@ -30,13 +33,18 @@ public class MigrateCustomTablesHandler(
     IProtocol protocol,
     BulkDataCopyService bulkDataCopyService,
     IEntityMapper<ICmsClass, DataClassInfo> dataClassMapper,
-    PrimaryKeyMappingContext primaryKeyMappingContext
+    PrimaryKeyMappingContext primaryKeyMappingContext,
+    ToolConfiguration configuration,
+    IContentItemManager contentItemManager
 // ReusableSchemaService reusableSchemaService
 )
     : IRequestHandler<MigrateCustomTablesCommand, CommandResult>
 {
     private readonly Guid resourceGuidNamespace = new("C4E3F5FD-9220-4300-91CE-8EB565D3235E");
     private ResourceInfo? customTableResource;
+
+    private readonly ContentItemNameProvider contentItemNameProvider = new(new ContentItemNameValidator());
+
 
     public async Task<CommandResult> Handle(MigrateCustomTablesCommand request, CancellationToken cancellationToken)
     {
@@ -139,6 +147,13 @@ public class MigrateCustomTablesHandler(
                     var r = (xbkDataClass.ClassTableName, xbkDataClass.ClassGUID, autoIncrementColumns);
                     logger.LogTrace("Class '{ClassGuild}' Resolved as: {Result}", srcClass.ClassGUID, r);
 
+                    string[] columnNamesToRemove = ["ItemID", "ItemModifiedWhen", "ItemGUID", "ContentItemDataID", "ContentItemDataGUID", "ContentItemDataCommonDataID"];
+
+                    var formInfo = new FormInfo(xbkDataClass.ClassFormDefinition);
+
+
+                    var columnsToInclude = formInfo.GetFields(true, true).Select(x => x.Name);
+
                     try
                     {
                         // check if data is present in target tables
@@ -149,15 +164,25 @@ public class MigrateCustomTablesHandler(
                             continue;
                         }
 
-                        var bulkCopyRequest = new BulkCopyRequest(
-                            xbkDataClass.ClassTableName,
-                            s => true, // s => !autoIncrementColumns.Contains(s),
-                            _ => true,
-                            20000
-                        );
+                        // get all the data for type
+                        var data = Data(xbkDataClass.ClassTableName);
 
-                        logger.LogTrace("Bulk data copy request: {Request}", bulkCopyRequest);
-                        bulkDataCopyService.CopyTableToTable(bulkCopyRequest);
+                        // create content items from data
+                        foreach (var item in data)
+                        {
+                            var guid = Guid.NewGuid();
+                            string nameColumn = item.Keys.Where(x => x.IndexOf("name", StringComparison.CurrentCultureIgnoreCase) > -1).FirstOrDefault("");
+                            string safeNodeName = await contentItemNameProvider.Get(item[nameColumn]?.ToString() ?? guid.ToString());
+                            CreateContentItemParameters createParams = new(
+                                                                xbkDataClass.ClassName,
+                                                                safeNodeName,
+                                                                "en_US");
+                            ContentItemData itemData = new(item);
+                            _ = await contentItemManager.Create(createParams, itemData);
+
+                        }
+
+                        logger.LogInformation($"Data imported for Custom Table: {xbkDataClass.ClassName}");
                     }
                     catch (Exception ex)
                     {
@@ -187,6 +212,14 @@ public class MigrateCustomTablesHandler(
                 // {
                 //     dataClassInfo = reusableSchemaService.ConvertToReusableSchema(dataClassInfo);
                 // }
+
+                var dataFormInfo = new FormInfo(dataClassInfo.ClassFormDefinition);
+
+                string[] columnNamesToRemove = ["ItemID", "ItemModifiedWhen", "ItemGUID"];
+
+                dataFormInfo.RemoveFields((x) => columnNamesToRemove.Contains(x.Name));
+
+                dataClassInfo.ClassFormDefinition = dataFormInfo.GetXmlDefinition();
 
                 var formInfo = FormHelper.GetBasicFormDefinition("ContentItemDataID");
 
@@ -221,7 +254,7 @@ public class MigrateCustomTablesHandler(
                 // Remove the resource
                 dataClassInfo.SetValue("ClassResourceID", null);
 
-                // Set the content hub
+                // Set the content hub type
                 dataClassInfo.ClassType = ClassType.CONTENT_TYPE;
                 dataClassInfo.ClassContentTypeType = ClassContentTypeType.REUSABLE;
                 dataClassInfo.ClassShortName = dataClassInfo.ClassName.Replace(".", "");
@@ -256,7 +289,7 @@ public class MigrateCustomTablesHandler(
     /// </summary>
     /// <param name="info"></param>
     /// <param name="form"></param>
-    private static void SetFormDefinition(DataClassInfo info, FormInfo form)
+    private void SetFormDefinition(DataClassInfo info, FormInfo form)
     {
         if (info.ClassID > 0)
         {
@@ -267,6 +300,31 @@ public class MigrateCustomTablesHandler(
         else
         {
             info.ClassFormDefinition = form.GetXmlDefinition();
+        }
+    }
+
+    private IEnumerable<Dictionary<string, object>> Data(string tableName)
+    {
+        using SqlConnection conn = new(configuration.KxConnectionString);
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT * FROM {tableName}";
+        using var reader = cmd.ExecuteReader();
+        string[] columnNamesToRemove = ["ItemID", "ItemModifiedWhen", "ItemGUID"];
+
+        while (reader.Read())
+        {
+            var dict = new Dictionary<string, object>();
+            for (int lp = 0; lp < reader.FieldCount; lp++)
+            {
+                string name = reader.GetName(lp);
+
+                if (!columnNamesToRemove.Contains(name))
+                {
+                    dict.Add(reader.GetName(lp), reader.GetValue(lp));
+                }
+            }
+            yield return dict;
         }
     }
 }
