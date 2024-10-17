@@ -23,6 +23,7 @@ using Migration.Tool.Source.Model;
 using Microsoft.Data.SqlClient;
 using CMS.ContentEngine;
 using CMS.Membership;
+using Migration.Tool.Source.Providers;
 
 namespace Migration.Tool.Source.Handlers;
 
@@ -42,6 +43,9 @@ public class MigrateCustomTablesHandler(
 {
     private readonly Guid resourceGuidNamespace = new("C4E3F5FD-9220-4300-91CE-8EB565D3235E");
     private ResourceInfo? customTableResource;
+
+    private readonly ContentItemNameProvider contentItemNameProvider = new(new ContentItemNameValidator());
+
 
     public async Task<CommandResult> Handle(MigrateCustomTablesCommand request, CancellationToken cancellationToken)
     {
@@ -181,6 +185,7 @@ public class MigrateCustomTablesHandler(
                             var guid = Guid.NewGuid();
                             string nameColumn = item.Keys.OrderByDescending(x => x.IndexOf("name", StringComparison.CurrentCultureIgnoreCase) > -1).ThenByDescending(x => x.IndexOf("title", StringComparison.CurrentCultureIgnoreCase) > -1).FirstOrDefault("");
                             string safeNodeName = item.ContainsKey(nameColumn) ? item[nameColumn]?.ToString() ?? guid.ToString() : guid.ToString();
+                            safeNodeName = new string(safeNodeName.Take(99).ToArray());
                             CreateContentItemParameters createParams = new(
                                                                 xbkDataClass.ClassName,
                                                                 safeNodeName,
