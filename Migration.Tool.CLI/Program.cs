@@ -167,8 +167,6 @@ services.AddSingleton(settings);
 services.AddSingleton<ICommandParser, CommandParser>();
 services.UseToolCommon();
 
-CMS.DataEngine.CMSApplication.Init();
-
 await using var serviceProvider = services.BuildServiceProvider();
 KsCoreDiExtensions.InitServiceProvider(serviceProvider);
 using var scope = serviceProvider.CreateScope();

@@ -35,8 +35,8 @@ public class MigrateCustomTablesHandler(
     IEntityMapper<ICmsClass, DataClassInfo> dataClassMapper,
     PrimaryKeyMappingContext primaryKeyMappingContext,
     ToolConfiguration configuration,
-    IContentItemManagerFactory contentItemManagerFactory,
-    IUserInfoProvider userInfoProvider
+    IUserInfoProvider userInfoProvider,
+    KxpApiInitializer kxpApiInitializer
 // ReusableSchemaService reusableSchemaService
 )
     : IRequestHandler<MigrateCustomTablesCommand, CommandResult>
@@ -81,6 +81,11 @@ public class MigrateCustomTablesHandler(
 
     private async Task MigrateCustomTables()
     {
+        if (!kxpApiInitializer.EnsureApiIsInitialized())
+        {
+            throw new InvalidOperationException("Falied to initialize kentico API. Please check configuration.");
+        }
+
         using var srcClassesDe = EnumerableHelper.CreateDeferrableItemWrapper(
             modelFacade.Select<ICmsClass>("ClassIsCustomTable=1", "ClassID ASC")
         );
@@ -174,6 +179,8 @@ public class MigrateCustomTablesHandler(
                                                                 safeNodeName,
                                                                 languageCode);
                             ContentItemData itemData = new(item);
+
+                            var contentItemManagerFactory = CMS.Core.Service.Resolve<IContentItemManagerFactory>();
 
                             var contentItemManager = contentItemManagerFactory.Create(user.UserID);
 
