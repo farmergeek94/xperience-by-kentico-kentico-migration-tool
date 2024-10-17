@@ -23,6 +23,7 @@ using Migration.Tool.Source.Model;
 using Microsoft.Data.SqlClient;
 using CMS.ContentEngine;
 using CMS.Membership;
+using System.Runtime.CompilerServices;
 
 namespace Migration.Tool.Source.Handlers;
 
@@ -49,6 +50,8 @@ public class MigrateCustomTablesHandler(
 
         return new GenericCommandResult();
     }
+
+    private readonly string[] columnNamesToRemove = ["ItemID", "ItemModifiedWhen", "ItemModifiedBy", "ItemGUID", "ItemCreatedBy", "ItemCreatedWhen", "ItemOrder"];
 
     private async Task<ResourceInfo> EnsureCustomTablesResource()
     {
@@ -185,8 +188,15 @@ public class MigrateCustomTablesHandler(
                                                                 languageCode);
                             ContentItemData itemData = new(item);
 
-                            int id = await contentItemManager.Create(createParams, itemData);
-                            await contentItemManager.TryPublish(id, languageCode);
+                            try
+                            {
+                                int id = await contentItemManager.Create(createParams, itemData);
+                                await contentItemManager.TryPublish(id, languageCode);
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogError(ex, "Error while copying data to table");
+                            }
 
                         }
 
@@ -225,8 +235,6 @@ public class MigrateCustomTablesHandler(
                 // }
 
                 var dataFormInfo = new FormInfo(dataClassInfo.ClassFormDefinition);
-
-                string[] columnNamesToRemove = ["ItemID", "ItemModifiedWhen", "ItemGUID"];
 
                 dataFormInfo.RemoveFields((x) => columnNamesToRemove.Contains(x.Name));
 
@@ -314,7 +322,6 @@ public class MigrateCustomTablesHandler(
         var cmd = conn.CreateCommand();
         cmd.CommandText = $"SELECT * FROM {tableName}";
         using var reader = cmd.ExecuteReader();
-        string[] columnNamesToRemove = ["ItemID", "ItemModifiedWhen", "ItemGUID"];
 
         while (reader.Read())
         {
@@ -323,7 +330,7 @@ public class MigrateCustomTablesHandler(
             {
                 string name = reader.GetName(lp);
 
-                if (!columnNamesToRemove.Contains(name))
+                if (!columnNamesToRemove.Contains(name) && !reader.IsDBNull(lp))
                 {
                     dict.Add(reader.GetName(lp), reader.GetValue(lp));
                 }
