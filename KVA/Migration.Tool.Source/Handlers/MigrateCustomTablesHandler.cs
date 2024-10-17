@@ -205,6 +205,9 @@ public class MigrateCustomTablesHandler(
 
     private async Task<DataClassInfo?> SaveClassUsingKxoApi(ICmsClass srcClass, DataClassInfo kxoDataClass)
     {
+
+
+
         var mapped = dataClassMapper.Map(srcClass, kxoDataClass);
         protocol.MappedTarget(mapped);
 
@@ -299,16 +302,9 @@ public class MigrateCustomTablesHandler(
     /// <param name="form"></param>
     private void SetFormDefinition(DataClassInfo info, FormInfo form)
     {
-        if (info.ClassID > 0)
-        {
-            var existingForm = new FormInfo(info.ClassFormDefinition);
-            existingForm.CombineWithForm(form, new());
-            info.ClassFormDefinition = existingForm.GetXmlDefinition();
-        }
-        else
-        {
-            info.ClassFormDefinition = form.GetXmlDefinition();
-        }
+        var existingForm = new FormInfo(info.ClassFormDefinition);
+        form.CombineWithForm(existingForm, new());
+        info.ClassFormDefinition = form.GetXmlDefinition();
     }
 
     private IEnumerable<Dictionary<string, object>> Data(string tableName)
