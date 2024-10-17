@@ -35,7 +35,6 @@ public class MigrateCustomTablesHandler(
     IEntityMapper<ICmsClass, DataClassInfo> dataClassMapper,
     PrimaryKeyMappingContext primaryKeyMappingContext,
     ToolConfiguration configuration,
-    IUserInfoProvider userInfoProvider,
     KxpApiInitializer kxpApiInitializer
 // ReusableSchemaService reusableSchemaService
 )
@@ -89,6 +88,8 @@ public class MigrateCustomTablesHandler(
         using var srcClassesDe = EnumerableHelper.CreateDeferrableItemWrapper(
             modelFacade.Select<ICmsClass>("ClassIsCustomTable=1", "ClassID ASC")
         );
+
+        var userInfoProvider = CMS.Core.Service.Resolve<IUserInfoProvider>();
 
         var user = userInfoProvider.Get("administrator");
 
