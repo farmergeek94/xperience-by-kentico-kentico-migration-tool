@@ -173,7 +173,7 @@ public class MigrateCustomTablesHandler(
                         // get all the data for type
                         var data = Data(xbkDataClass.ClassTableName);
 
-                        string languageCode = modelFacade.SelectAll<ICmsCulture>().FirstOrDefault(x => x.CultureIsUICulture == true)?.CultureCode ?? "en";
+                        string languageCode = ContentLanguageInfoProvider.ProviderObject.Get().ToList().Select(x => x.ContentLanguageName).FirstOrDefault() ?? "en";
 
                         // create content items from data
                         foreach (var item in data)
