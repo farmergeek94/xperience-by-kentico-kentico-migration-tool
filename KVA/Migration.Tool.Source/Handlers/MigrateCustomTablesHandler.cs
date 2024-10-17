@@ -91,7 +91,11 @@ public class MigrateCustomTablesHandler(
 
         var userInfoProvider = CMS.Core.Service.Resolve<IUserInfoProvider>();
 
+        var contentItemManagerFactory = CMS.Core.Service.Resolve<IContentItemManagerFactory>();
+
         var user = userInfoProvider.Get("administrator");
+
+        var contentItemManager = contentItemManagerFactory.Create(user.UserID);
 
         while (srcClassesDe.GetNext(out var di))
         {
@@ -181,11 +185,8 @@ public class MigrateCustomTablesHandler(
                                                                 languageCode);
                             ContentItemData itemData = new(item);
 
-                            var contentItemManagerFactory = CMS.Core.Service.Resolve<IContentItemManagerFactory>();
-
-                            var contentItemManager = contentItemManagerFactory.Create(user.UserID);
-
-                            _ = await contentItemManager.Create(createParams, itemData);
+                            int id = await contentItemManager.Create(createParams, itemData);
+                            await contentItemManager.TryPublish(id, languageCode);
 
                         }
 
