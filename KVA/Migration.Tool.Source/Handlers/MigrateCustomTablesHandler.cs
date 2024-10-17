@@ -265,7 +265,7 @@ public class MigrateCustomTablesHandler(
                 // Set the content hub type
                 dataClassInfo.ClassType = ClassType.CONTENT_TYPE;
                 dataClassInfo.ClassContentTypeType = ClassContentTypeType.REUSABLE;
-                dataClassInfo.ClassShortName = dataClassInfo.ClassName.Replace(".", "");
+                dataClassInfo.ClassShortName = dataClassInfo.ClassName.Replace(".", "").Replace("_", "");
 
                 // Reset to reusable content type. 
                 SetFormDefinition(dataClassInfo, formInfo);
