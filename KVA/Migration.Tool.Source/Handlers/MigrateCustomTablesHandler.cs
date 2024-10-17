@@ -167,7 +167,7 @@ public class MigrateCustomTablesHandler(
                         // get all the data for type
                         var data = Data(xbkDataClass.ClassTableName);
 
-                        string languageCode = modelFacade.SelectAll<ICmsCulture>().Select(x => x.CultureCode).FirstOrDefault() ?? "en_US";
+                        string languageCode = "en_US";
 
                         // create content items from data
                         foreach (var item in data)
