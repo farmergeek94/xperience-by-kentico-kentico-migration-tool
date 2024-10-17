@@ -23,7 +23,6 @@ using Migration.Tool.Source.Model;
 using Microsoft.Data.SqlClient;
 using CMS.ContentEngine;
 using CMS.Membership;
-using System.Runtime.CompilerServices;
 
 namespace Migration.Tool.Source.Handlers;
 
@@ -180,8 +179,8 @@ public class MigrateCustomTablesHandler(
                         foreach (var item in data)
                         {
                             var guid = Guid.NewGuid();
-                            string nameColumn = item.Keys.Where(x => x.IndexOf("name", StringComparison.CurrentCultureIgnoreCase) > -1).FirstOrDefault("");
-                            string safeNodeName = item[nameColumn]?.ToString() ?? guid.ToString();
+                            string nameColumn = item.Keys.OrderByDescending(x => x.IndexOf("name", StringComparison.CurrentCultureIgnoreCase) > -1).ThenByDescending(x => x.IndexOf("title", StringComparison.CurrentCultureIgnoreCase) > -1).FirstOrDefault("");
+                            string safeNodeName = item.ContainsKey(nameColumn) ? item[nameColumn]?.ToString() ?? guid.ToString() : guid.ToString();
                             CreateContentItemParameters createParams = new(
                                                                 xbkDataClass.ClassName,
                                                                 safeNodeName,
