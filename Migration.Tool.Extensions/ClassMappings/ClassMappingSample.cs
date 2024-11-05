@@ -21,6 +21,7 @@ public static class ClassMappingSample
             target.ClassDisplayName = "Coffee remodeled";
             target.ClassType = ClassType.CONTENT_TYPE;
             target.ClassContentTypeType = ClassContentTypeType.WEBSITE;
+            target.ClassShortName = String.Empty;
         });
 
         // set new primary key
@@ -219,6 +220,76 @@ public static class ClassMappingSample
         // register reusable schema builder
         serviceCollection.AddSingleton<IReusableSchemaBuilder>(sb);
         serviceCollection.AddSingleton<IReusableSchemaBuilder>(sb2);
+
+        return serviceCollection;
+    }
+
+    public static IServiceCollection AddRemodeledBankingForm(this IServiceCollection serviceCollection)
+    {
+        const string targetClassName = "BankingApp.RemodeledBankingForm";
+
+        // Declare the target class
+        var m = new MultiClassMapping(targetClassName, target =>
+        {
+            target.ClassName = targetClassName;
+            target.ClassTableName = "BankingApp_RemodeledBankingForm";
+            target.ClassDisplayName = "Remodeled Banking Form";
+            target.ClassType = ClassType.CONTENT_TYPE;
+            target.ClassContentTypeType = ClassContentTypeType.REUSABLE;
+            target.ClassShortName = "BankingAppRemodeledBankingForm";
+        });
+
+        // Set a new primary key
+        m.BuildField("RemodeledBankingFormID").AsPrimaryKey();
+
+        // Map fields from the original form and set new properties as needed
+        const string sourceClassName = "customtable.BusinessBankers";
+
+        m
+            .BuildField("BankerNameRM")
+            .SetFrom(sourceClassName, "BankerName", true)
+            .WithFieldPatch(f => f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Banker Name RM"));
+
+        m
+            .BuildField("TitleRM")
+            .SetFrom(sourceClassName, "Title", true)
+            .WithFieldPatch(f =>
+            {
+                f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Title RM");
+            });
+
+        m
+            .BuildField("CommercialBankingRM")
+            .SetFrom(sourceClassName, "CommercialBanking", true)
+            .WithFieldPatch(f => f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Commercial Banking RM"));
+
+        m
+            .BuildField("BusinessBankingRM")
+            .SetFrom(sourceClassName, "BusinessBanking", true)
+            .WithFieldPatch(f => f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Business Banking RM"));
+
+        m
+            .BuildField("SmallBusinessBankingRM")
+            .SetFrom(sourceClassName, "SmallBusinessBanking", true)
+            .WithFieldPatch(f => f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Small Business Banking RM"));
+
+        m
+            .BuildField("EmailRM")
+            .SetFrom(sourceClassName, "Email", true)
+            .WithFieldPatch(f => f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Email Address RM"));
+
+        m
+            .BuildField("OfficePhoneRM")
+            .SetFrom(sourceClassName, "OfficePhone", true)
+            .WithFieldPatch(f => f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Office Phone RM"));
+
+        m
+            .BuildField("LocationRM")
+            .SetFrom(sourceClassName, "Location", true)
+            .WithFieldPatch(f => f.SetPropertyValue(FormFieldPropertyEnum.FieldCaption, "Address RM"));
+
+        // Register class mapping
+        serviceCollection.AddSingleton<IClassMapping>(m);
 
         return serviceCollection;
     }
