@@ -174,10 +174,8 @@ public class MigrateCustomTablesHandler(
                             continue;
                         }
 
-
-
                         // get all the data for type
-                        var data = Data(xbkDataClass);
+                        var data = Data(xbkDataClass.ClassTableName);
 
                         string languageCode = ContentLanguageInfoProvider.ProviderObject.Get().ToList().Select(x => x.ContentLanguageName).FirstOrDefault() ?? "en";
 
@@ -201,7 +199,7 @@ public class MigrateCustomTablesHandler(
                             }
                             catch (Exception ex)
                             {
-                                logger.LogError(ex, "Error while copying data for Custom Table: {ClassName}", xbkDataClass.ClassName);
+                                logger.LogError(ex, "Error while copying data to table");
                             }
 
                         }
@@ -210,7 +208,7 @@ public class MigrateCustomTablesHandler(
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, "Error while copying data for Custom Table: {ClassName}", xbkDataClass.ClassName);
+                        logger.LogError(ex, "Error while copying data to table");
                     }
                 }
 
@@ -321,12 +319,12 @@ public class MigrateCustomTablesHandler(
         info.ClassFormDefinition = form.GetXmlDefinition();
     }
 
-    private IEnumerable<Dictionary<string, object>> Data(DataClassInfo targetClass)
+    private IEnumerable<Dictionary<string, object>> Data(string tableName)
     {
         using SqlConnection conn = new(configuration.KxConnectionString);
         conn.Open();
         var cmd = conn.CreateCommand();
-        cmd.CommandText = $"SELECT * FROM {targetClass.ClassTableName}";
+        cmd.CommandText = $"SELECT * FROM {tableName}";
         using var reader = cmd.ExecuteReader();
 
         while (reader.Read())
