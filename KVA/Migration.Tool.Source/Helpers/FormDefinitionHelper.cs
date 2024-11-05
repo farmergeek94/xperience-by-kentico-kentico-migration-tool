@@ -3,7 +3,6 @@ using CMS.FormEngine;
 using Microsoft.Extensions.Logging;
 using Migration.Tool.KXP.Api.Services.CmsClass;
 using Migration.Tool.Source.Model;
-using Mono.Cecil;
 
 namespace Migration.Tool.Source.Helpers;
 
@@ -20,8 +19,7 @@ public static class FormDefinitionHelper
                 source.ClassIsForm.GetValueOrDefault(false),
                 source.ClassIsDocumentType,
                 isCustomizableSystemClass,
-                classIsCustom,
-                source.ClassIsCustomTable
+                classIsCustom
             );
 
             patcher.PatchFields();

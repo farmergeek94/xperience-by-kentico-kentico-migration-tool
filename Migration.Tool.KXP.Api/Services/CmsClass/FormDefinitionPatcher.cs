@@ -56,7 +56,6 @@ public class FormDefinitionPatcher
     ], StringComparer.InvariantCultureIgnoreCase);
 
     private readonly bool altForm;
-    private readonly bool classIsCustomTable;
     private readonly bool classIsCustom;
     private readonly bool classIsDocumentType;
     private readonly bool classIsForm;
@@ -74,8 +73,7 @@ public class FormDefinitionPatcher
         bool classIsDocumentType,
         bool discardSysFields,
         bool classIsCustom,
-        bool altForm = false,
-        bool classIsCustomTable = false)
+        bool altForm = false)
     {
         this.logger = logger;
         this.formDefinitionXml = formDefinitionXml;
@@ -85,7 +83,6 @@ public class FormDefinitionPatcher
         this.discardSysFields = discardSysFields;
         this.classIsCustom = classIsCustom;
         this.altForm = altForm;
-        this.classIsCustomTable = classIsCustomTable;
         xDoc = XDocument.Parse(this.formDefinitionXml);
     }
 
@@ -257,7 +254,7 @@ public class FormDefinitionPatcher
                 break;
         }
 
-        if (!classIsForm && !classIsDocumentType && !classIsCustomTable)
+        if (!classIsForm && !classIsDocumentType)
         {
             bool hasVisibleAttribute = visibleAttr != null;
             if (enabledAttr is { } enabled)
@@ -321,7 +318,7 @@ public class FormDefinitionPatcher
             }
         }
 
-        if (classIsForm || classIsDocumentType || classIsCustomTable)
+        if (classIsForm || classIsDocumentType)
         {
             if (field.Attribute(FieldAttrVisible) is { } visible && field.Attribute(FieldAttrEnabled) is null)
             {
